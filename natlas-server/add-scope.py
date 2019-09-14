@@ -7,10 +7,17 @@ from app.models import ScopeItem
 app = create_app()
 app.app_context().push()
 
-def importScope(file, blacklist, verbose):
+def importScope(file, blacklist, verbose, forcereplace):
     failedImports = []
     alreadyExists = []
     successImports = []
+
+    if forcereplace:
+        print("\nRemoving all existing scope entries!\n")
+        for scope in ScopeItem.query.all():
+            db.session.delete(scope)
+        db.session.commit()
+
     with open(file, 'r') as scope:
         for line in scope.readlines():
             line = line.strip()
@@ -43,20 +50,20 @@ def importScope(file, blacklist, verbose):
         for i in failedImports:
             print("[!] %s" % i)
 
-
 def main():
     parser_desc = "Server-side utility for populating scope/blacklist from a file directly to the database"
     parser_epil = "Be sure that you're running this from within the virtual environment for the server."
     parser = argparse.ArgumentParser(description=parser_desc, epilog=parser_epil)
     parser.add_argument("--scope", metavar='FILE', help="A file containing line-separated IPs and CIDR ranges to be added to scope.")
     parser.add_argument("--blacklist", metavar='FILE', help="A file containing line-separated IPs and CIDR ranges to be added to the blacklist.")
+    parser.add_argument("--forcereplace", action="store_true",  default=False, help="DROP all scope entries, replacing with the new --scope file")
     parser.add_argument("-v", "--verbose", action="store_true", default=False, help="Print list of successful, already existing, and failed imports.")
     args = parser.parse_args()
 
     if args.scope:
-        importScope(args.scope, False, args.verbose)
+        importScope(args.scope, False, args.verbose, args.forcereplace)
     if args.blacklist:
-        importScope(args.blacklist, True, args.verbose)
+        importScope(args.blacklist, True, args.verbose, args.forcereplace)
 
 if __name__ == "__main__":
     main()
