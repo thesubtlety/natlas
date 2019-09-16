@@ -195,11 +195,11 @@ form.config-form>div, form.pwchange-form>div {
 
 .host-row:nth-child(odd) {
   background-color: #f9f9f9;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid #d6d6d6;
 }
 .host-row:nth-child(even) {
   background-color: #ececec;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid #d6d6d6;
 }
 
 .host-header-date {
