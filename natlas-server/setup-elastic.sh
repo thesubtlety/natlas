@@ -2,6 +2,7 @@
 
 TARGETVER="6.6.0"
 ELASTICDOWNLOAD='https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.6.0.deb'
+ELASTICSEARCHPLUGIN='/usr/share/elasticsearch/bin/elasticsearch-plugin'
 
 if [[ "$EUID" -ne 0 ]]; then
   echo "[!] This script needs elevated permissions to run."
@@ -31,7 +32,7 @@ elif ! echo "$ELASTIC" | grep "$VERTSTR" | grep "$TARGETVER" >/dev/null; then
     echo "[+] Updating Elasticsearch to $TARGETVER"
     DOWNLOAD=1
 else
-    echo "[+] Found Elasticsearch $TARGETVER" && exit 0
+    echo "[+] Found Elasticsearch $TARGETVER"
 fi
 
 if [ $DOWNLOAD -eq 1 ]; then
@@ -49,6 +50,11 @@ if [ $DOWNLOAD -eq 1 ]; then
         echo "[+] Successfully installed Elasticsearch $TARGETVER"
         rm /tmp/elasticsearch.deb
     fi
+fi
+
+if ! $ELASTICSEARCHPLUGIN list | grep -q "ingest-geoip"; then
+        echo "[+] Installing ingest-geoip plugin"
+        $ELASTICSEARCHPLUGIN install ingest-geoip
 fi
 
 if ! systemctl is-active --quiet elasticsearch; then

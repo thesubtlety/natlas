@@ -7,6 +7,7 @@ class Elastic:
     es = None
     status = False
     errrorinfo = ''
+    natlasPipelines = ["geoip"]
     natlasIndices = ["nmap", "nmap_history"]
 
     def __init__(self, elasticURL):
@@ -15,6 +16,14 @@ class Elastic:
             if "cluster_name" in self.es.nodes.info():
                 self.status = True
             if self.status:
+                for pipeline in self.natlasPipelines:
+                    if not self.es.ingest.get_pipeline(pipeline):
+                        myPipelineInit = {"description": "Add GeoIP info from IP",
+                                "processors": [{
+                                    "geoip": {"field":"ip"}
+                                }]
+                        }
+                        self.es.ingest.put_pipeline(pipeline, body=myPipelineInit)
                 for index in self.natlasIndices: # initialize nmap and nmap_history and give them mappings for known necessary types
                     if not self.es.indices.exists(index):
                         myIndexInit = {"mappings":{"_doc":{"properties":{
@@ -37,6 +46,9 @@ class Elastic:
                             "httpsheadshot": {"type": "binary"},
                             "httpsheadshot": {"type": "binary"},
                             "vncheadshot": {"type":"binary"},
+                            "geoip": {"properties": {
+                                "location" : { "type" : "geo_point" }
+                            }},
                             "ports": {"type": "nested", "properties": {
                                 "id" : {"type": "keyword"},
                                 "number" : {"type": "integer"},
@@ -133,7 +145,7 @@ class Elastic:
         ip = str(host['ip'])
         # broken in ES6
         self.es.index(index='nmap_history', doc_type='_doc', body=host)
-        self.es.index(index='nmap', doc_type='_doc', id=ip, body=host)
+        self.es.index(index='nmap', doc_type='_doc', id=ip, body=host, pipeline='geoip')
 
     def gethost(self, ip):
         if not self.status:
