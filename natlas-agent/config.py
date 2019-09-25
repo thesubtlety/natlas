@@ -59,3 +59,6 @@ class Config:
         # Authentication token that agents can use to talk to the server API
         # Only needed if the server is configured to require agent authentication
         self.auth_token = os.environ.get("NATLAS_AGENT_TOKEN") or None
+
++        # Python file used to run additional elasticsearch enrichment functions
++        self.enrich_file_path = os.environ.get("ENRICH_FILE_PATH") or None

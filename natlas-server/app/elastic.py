@@ -1,6 +1,8 @@
 import json
 import elasticsearch
 import random
+import os
+import subprocess
 
 
 class Elastic:
@@ -146,6 +148,15 @@ class Elastic:
         # broken in ES6
         self.es.index(index='nmap_history', doc_type='_doc', body=host)
         self.es.index(index='nmap', doc_type='_doc', id=ip, body=host, pipeline='geoip')
+
+        # Run host enrichment script if enabled
+        if os.environ.get('ENRICH_FILE_PATH'):
+            filename = os.environ.get('ENRICH_FILE_PATH')
+            proc = subprocess.Popen(["python3",filename,ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = proc.communicate()
+            if err:
+                print("Error enriching host data | {}, ip: {}".format(filename, ip))
+                print("{}".format(err))
 
     def gethost(self, ip):
         if not self.status:
