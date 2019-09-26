@@ -19,7 +19,10 @@ class Elastic:
                 self.status = True
             if self.status:
                 for pipeline in self.natlasPipelines:
-                    if not self.es.ingest.get_pipeline(pipeline):
+                    try:
+                        self.es.ingest.get_pipeline(pipeline)
+                    except elasticsearch.exceptions.NotFoundError:
+                        print("{} pipeline not found, initiating...".format(pipeline))
                         myPipelineInit = {"description": "Add GeoIP info from IP",
                                 "processors": [{
                                     "geoip": {"field":"ip"}
