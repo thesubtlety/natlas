@@ -365,6 +365,10 @@ class ThreadScan(threading.Thread):
                 target_data = self.queue.get()
                 if target_data is None:
                     break
+                if target_data.get("services_hash") != self.servicesSha:
+                    self.servicesSha = get_services_file()
+                    if not self.servicesSha:
+                        print_err("Failed to get updated services from %s" % config.server)
                 print_info("Manual Target: %s" % target_data["target"])
                 result = scan(target_data)
                 self.queue.task_done()
