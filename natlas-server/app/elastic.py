@@ -28,7 +28,10 @@ class Elastic:
                                     "geoip": {"field":"ip"}
                                 }]
                         }
-                        self.es.ingest.put_pipeline(pipeline, body=myPipelineInit)
+                        try:
+                            self.es.ingest.put_pipeline(pipeline, body=myPipelineInit)
+                        except Exception as e:
+                            print("Error adding geoip pipeline, continuing: %s" % e)
                 for index in self.natlasIndices: # initialize nmap and nmap_history and give them mappings for known necessary types
                     if not self.es.indices.exists(index):
                         myIndexInit = {"mappings":{"_doc":{"properties":{
