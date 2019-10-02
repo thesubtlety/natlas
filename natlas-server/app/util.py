@@ -15,8 +15,9 @@ def hostinfo(ip):
     for hs in headshotTypes:
         if context.get(hs):
             headshots += 1
-    headshots = len(context.get('screenshots')) #TODO remove above, account for vnc
-    hostinfo['headshots'] = headshots
+    headshots = context.get('screenshots') #TODO remove above, account for vnc
+    if headshots:
+        hostinfo['headshots'] = len(headshots)
     if context.get('hostname'):
         hostinfo['hostname'] = context.get('hostname')
     return hostinfo, context

@@ -31,12 +31,11 @@ def getheadshot(ip, rand, service):
         #process = subprocess.Popen(["wkhtmltoimage", "--javascript-delay", "3000", "--width", "800", "--height", "600", "--quality",
         #                            "80", "-f", "jpg", service+"://"+ip, "data/natlas."+rand+"." + service + ".headshot.jpg"], stdout=FNULL, stderr=FNULL)
         if "xml" in service:
-            print("running aquatone from nmap xml")
             process = subprocess.Popen(["aquatone","-nmap","-out", "data/aquatone."+rand], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL)
             process.stdin.write(service.encode('utf-8'))
         else:
             p1 = subprocess.Popen(["echo", service+"://"+ip], stdout=subprocess.PIPE)
-            process = subprocess.Popen(["aquatone","-ports",service, "-scan-timeout", "1000", "-out", "data/aquatone."+rand+".port"+service], stdin=p1.stdout, stdout=subprocess.DEVNULL)
+            process = subprocess.Popen(["aquatone", "-scan-timeout", "1000", "-out", "data/aquatone."+rand+"."+service], stdin=p1.stdout, stdout=subprocess.DEVNULL)
             p1.stdout.close()
         
         try:

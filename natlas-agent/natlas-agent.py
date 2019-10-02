@@ -300,7 +300,6 @@ def scan(target_data=None):
         result['port_count'] = len(nmap_report.hosts[0].get_ports())
 
     if target_data["agent_config"]["webScreenshots"] and shutil.which("aquatone") is not None:
-        # aquatone screenshots
         if target_data["agent_config"]["aquatoneAllPorts"] or config.aquatoneAllPorts:
             aquatoneAllPorts(result, scan_id, target)
         else:
@@ -324,26 +323,42 @@ def scan(target_data=None):
     response = backoff_request(giveup=True, endpoint="/api/submit", reqType="POST", postData=json.dumps(result))
 
 def aquatoneSpecifiedPorts(target_data, result, scan_id, target):
-    for screenshotPort in target_data["agent_config"]['screenshotPorts'].split(","):
-        portIndexName = "port{}_headshot".format(screenshotPort)
-        if bool(re.findall("\n{}/tcp".format(screenshotPort),result['nmap_data'])):
-            if getheadshot(target, scan_id, screenshotPort) is True:
-                screenshotPath = "data/aquatone.{}.port{}/screenshots/http__{}__{}.png".format(scan_id,screenshotPort,target.replace('.','_'),screenshotPort)
-                if not os.path.isfile(screenshotPath):
-                    shutil.rmtree("data/aquatone.{}.port{}/".format(scan_id, screenshotPort))
-                else:
-                    result[portIndexName] = str(base64.b64encode(
-                        open(screenshotPath, 'rb').read()))[2:-1]
-                    shutil.rmtree("data/aquatone.{}.port{}/".format(scan_id, screenshotPort))
+    result['screenshots'] = {}
+    if "80/tcp" in result['nmap_data']:
+        if getheadshot(target, scan_id, 'http') is True:
+            print_info("Attempting to take HTTP screenshot for %s" % result['ip'])
+            screenshotPath = "data/aquatone." + scan_id + ".http/screenshots/http__" +target.replace('.','_') + ".png"
+            if not os.path.isfile(screenshotPath):
+                shutil.rmtree("data/aquatone." + scan_id + ".http/")
             else:
-                print_err("Failed to acquire HTTP screenshot for %s" % result['ip'])
+                portIndexName = "port80_headshot"
+                result['screenshots'][portIndexName] = str(base64.b64encode(
+                    open(screenshotPath, 'rb').read()))[2:-1]
+                shutil.rmtree("data/aquatone." + scan_id + ".http/")
+                print_info("HTTP screenshot acquired for %s" % result['ip'])
+        else:
+            print_err("Failed to acquire HTTP screenshot for %s" % result['ip'])
+
+    if "443/tcp" in result['nmap_data']:
+        if getheadshot(target, scan_id, 'https') is True:
+            print_info("Attempting to take HTTPS screenshot for %s" % result['ip'])
+            screenshotPath = "data/aquatone." + scan_id + ".https/screenshots/https__" +target.replace('.','_') + ".png"
+            if not os.path.isfile(screenshotPath):
+                shutil.rmtree("data/aquatone." + scan_id + ".https/")
+            else:
+                portIndexName = "port443_headshot"
+                result['screenshots'][portIndexName] = str(base64.b64encode(
+                    open(screenshotPath, 'rb').read()))[2:-1]
+                shutil.rmtree("data/aquatone." + scan_id + ".https/")
+                print_info("HTTPS screenshot acquired for %s" % result['ip'])
+        else:
+            print_err("Failed to acquire HTTPS screenshot for %s" % result['ip'])
 
 def aquatoneAllPorts(result, scan_id, target):
     result['screenshots'] = {}
     if result['port_count'] > 0:
         if getheadshot(target, scan_id, result['xml_data']) is True: # pass output to aquatone, screenshot all the things
             screenshotPath = "data/aquatone.{}/screenshots/".format(scan_id)
-            print_info("screenshot path: %s" % screenshotPath)
             if len(os.listdir(screenshotPath)) == 0:
                 shutil.rmtree("data/aquatone.{}/".format(scan_id))
             else:
@@ -357,7 +372,7 @@ def aquatoneAllPorts(result, scan_id, target):
                     portIndexName = "port{}headshot".format(port)
                     result['screenshots'][portIndexName] = str(base64.b64encode(
                         open(screenshotPath+"/"+f, 'rb').read()))[2:-1]
-                    print_info("Screenshot acquired for %s, port: %s" % (result['ip'], port))
+                    print_info("Screenshots acquired for %s" % result['ip'])
                 shutil.rmtree("data/aquatone.{}".format(scan_id))
         else:
             print_err("Failed to acquire HTTP screenshot for %s" % result['ip'])
@@ -446,6 +461,7 @@ def main():
         "webScreenshots": True,
         "vncScreenshots": True,
         "screenshotPorts": "80,443",
+        "aquatoneAllPorts": True,
         "scriptTimeout": 60,
         "hostTimeout": 600,
         "osScanLimit": True,
