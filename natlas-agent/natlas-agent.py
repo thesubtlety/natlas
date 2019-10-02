@@ -369,10 +369,10 @@ def aquatoneAllPorts(result, scan_id, target):
                         port = 443 if service == "https" else 80
                     else:
                         port = port[0]
-                    portIndexName = "port{}headshot".format(port)
+                    portIndexName = "port{}_headshot".format(port)
                     result['screenshots'][portIndexName] = str(base64.b64encode(
                         open(screenshotPath+"/"+f, 'rb').read()))[2:-1]
-                    print_info("Screenshots acquired for %s" % result['ip'])
+                print_info("Screenshots acquired for %s" % result['ip'])
                 shutil.rmtree("data/aquatone.{}".format(scan_id))
         else:
             print_err("Failed to acquire HTTP screenshot for %s" % result['ip'])

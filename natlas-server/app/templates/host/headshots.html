@@ -5,7 +5,7 @@
     {% include 'host/_header.html' %}
     {% if screenshots %}
         {% for shot, b64 in screenshots.items()  %}
-            <h3 class="headshot-header">{{ shot | replace("_headshot","") }} Screenshot</h3>
+            <h3 class="headshot-header">{{ shot | replace("_"," ") }} Screenshot</h3>
             <img src="data:image/jpeg;base64,{{ b64 }}" alt="{{ ip }} - {{ shot }} Screenshot" class="host-headshot">
         {% endfor %}
     {% endif %}
