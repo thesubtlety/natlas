@@ -5,6 +5,7 @@ import requests
 import subprocess
 import time
 import os
+import re
 import random
 import string
 import json
@@ -151,6 +152,14 @@ def get_services_file():
         return False # return false if we were unable to get a response from the server
     return serviceData["sha256"] # return True if we got a response and everything checks out
 
+def fetch_agentConfig():
+    print_info("Fetching agentConfig from %s" % config.server)
+    response = backoff_request(endpoint="/api/natlas-agentConfig")
+    if response:
+        serverAgentConfig = response.json()
+    else:
+        return False
+    return serverAgentConfig
 
 def fetch_target():
     print_info("Fetching Target from %s" % config.server)
@@ -291,50 +300,67 @@ def scan(target_data=None):
         result['port_count'] = len(nmap_report.hosts[0].get_ports())
 
     if target_data["agent_config"]["webScreenshots"] and shutil.which("aquatone") is not None:
-        if "80/tcp" in result['nmap_data']:
-            if getheadshot(target, scan_id, 'http') is True:
-                print_info("Attempting to take HTTP screenshot for %s" % result['ip'])
-                screenshotPath = "data/aquatone." + scan_id + ".http/screenshots/http__" +target.replace('.','_') + ".png"
-                if not os.path.isfile(screenshotPath):
-                    shutil.rmtree("data/aquatone." + scan_id + ".http/")
-                else:
-                    result['httpheadshot'] = str(base64.b64encode(
-                        open(screenshotPath, 'rb').read()))[2:-1]
-                    shutil.rmtree("data/aquatone." + scan_id + ".http/")
-                    print_info("HTTP screenshot acquired for %s" % result['ip'])
-            else:
-                print_err("Failed to acquire HTTP screenshot for %s" % result['ip'])
+        # aquatone screenshots
+        if target_data["agent_config"]["aquatoneAllPorts"] or config.aquatoneAllPorts:
+            aquatoneAllPorts(result, scan_id, target)
+        else:
+            aquatoneSpecifiedPorts(target_data, result, scan_id, target)
 
-        if "443/tcp" in result['nmap_data']:
-            if getheadshot(target, scan_id, 'https') is True:
-                print_info("Attempting to take HTTPS screenshot for %s" % result['ip'])
-                screenshotPath = "data/aquatone." + scan_id + ".https/screenshots/https__" +target.replace('.','_') + ".png"
-                if not os.path.isfile(screenshotPath):
-                    shutil.rmtree("data/aquatone." + scan_id + ".https/")
+        if target_data["agent_config"]["vncScreenshots"] and shutil.which("vncsnapshot") is not None:
+            if "5900/tcp" in result['nmap_data']:
+                print_info("Attempting to take vnc screenshot for %s" % result['ip'])
+                if getheadshot(target, scan_id, 'vnc') is True:
+                    result['vncsheadshot'] = str(base64.b64encode(
+                        open("data/natlas."+scan_id+".vnc.headshot.jpg", 'rb').read()))[2:-1]
+                    os.remove("data/natlas."+scan_id+".vnc.headshot.jpg")
+                    print_info("VNC screenshot acquired for %s" % result['ip'])
                 else:
-                    result['httpsheadshot'] = str(base64.b64encode(
-                        open(screenshotPath, 'rb').read()))[2:-1]
-                    shutil.rmtree("data/aquatone." + scan_id + ".https/")
-                    print_info("HTTPS screenshot acquired for %s" % result['ip'])
-            else:
-                print_err("Failed to acquire HTTPS screenshot for %s" % result['ip'])
-
-    if target_data["agent_config"]["vncScreenshots"] and shutil.which("vncsnapshot") is not None:
-        if "5900/tcp" in result['nmap_data']:
-            print_info("Attempting to take vnc screenshot for %s" % result['ip'])
-            if getheadshot(target, scan_id, 'vnc') is True:
-                result['vncsheadshot'] = str(base64.b64encode(
-                    open("data/natlas."+scan_id+".vnc.headshot.jpg", 'rb').read()))[2:-1]
-                os.remove("data/natlas."+scan_id+".vnc.headshot.jpg")
-                print_info("VNC screenshot acquired for %s" % result['ip'])
-            else:
-                print_err("Failed to acquire screenshot for %s" % result['ip'])
+                    print_err("Failed to acquire screenshot for %s" % result['ip'])
 
     # submit result
     result['scan_stop'] = datetime.now(timezone.utc).isoformat()
     cleanup_files(scan_id)
     print_info("Submitting %s ports for %s" % (result['port_count'], result['ip']))
     response = backoff_request(giveup=True, endpoint="/api/submit", reqType="POST", postData=json.dumps(result))
+
+def aquatoneSpecifiedPorts(target_data, result, scan_id, target):
+    for screenshotPort in target_data["agent_config"]['screenshotPorts'].split(","):
+        portIndexName = "port{}_headshot".format(screenshotPort)
+        if bool(re.findall("\n{}/tcp".format(screenshotPort),result['nmap_data'])):
+            if getheadshot(target, scan_id, screenshotPort) is True:
+                screenshotPath = "data/aquatone.{}.port{}/screenshots/http__{}__{}.png".format(scan_id,screenshotPort,target.replace('.','_'),screenshotPort)
+                if not os.path.isfile(screenshotPath):
+                    shutil.rmtree("data/aquatone.{}.port{}/".format(scan_id, screenshotPort))
+                else:
+                    result[portIndexName] = str(base64.b64encode(
+                        open(screenshotPath, 'rb').read()))[2:-1]
+                    shutil.rmtree("data/aquatone.{}.port{}/".format(scan_id, screenshotPort))
+            else:
+                print_err("Failed to acquire HTTP screenshot for %s" % result['ip'])
+
+def aquatoneAllPorts(result, scan_id, target):
+    result['screenshots'] = {}
+    if result['port_count'] > 0:
+        if getheadshot(target, scan_id, result['xml_data']) is True: # pass output to aquatone, screenshot all the things
+            screenshotPath = "data/aquatone.{}/screenshots/".format(scan_id)
+            print_info("screenshot path: %s" % screenshotPath)
+            if len(os.listdir(screenshotPath)) == 0:
+                shutil.rmtree("data/aquatone.{}/".format(scan_id))
+            else:
+                for f in os.listdir(screenshotPath):
+                    port = re.findall('__(\d{1,5})\.png',f)
+                    if not port:
+                        service = f.split("_")[0]
+                        port = 443 if service == "https" else 80
+                    else:
+                        port = port[0]
+                    portIndexName = "port{}headshot".format(port)
+                    result['screenshots'][portIndexName] = str(base64.b64encode(
+                        open(screenshotPath+"/"+f, 'rb').read()))[2:-1]
+                    print_info("Screenshot acquired for %s, port: %s" % (result['ip'], port))
+                shutil.rmtree("data/aquatone.{}".format(scan_id))
+        else:
+            print_err("Failed to acquire HTTP screenshot for %s" % result['ip'])
 
 class ThreadScan(threading.Thread):
     def __init__(self, queue, auto=False, servicesSha=''):
@@ -365,10 +391,6 @@ class ThreadScan(threading.Thread):
                 target_data = self.queue.get()
                 if target_data is None:
                     break
-                if target_data.get("services_hash") != self.servicesSha:
-                    self.servicesSha = get_services_file()
-                    if not self.servicesSha:
-                        print_err("Failed to get updated services from %s" % config.server)
                 print_info("Manual Target: %s" % target_data["target"])
                 result = scan(target_data)
                 self.queue.task_done()
@@ -378,6 +400,7 @@ def main():
     PARSER_EPILOG = "Report problems to https://github.com/natlas/natlas"
     parser = argparse.ArgumentParser(description=PARSER_DESC, epilog=PARSER_EPILOG, prog='natlas-agent')
     parser.add_argument('--version', action='version', version='%(prog)s {}'.format(config.NATLAS_VERSION))
+    parser.add_argument('--use-server-agent-config', action='store_true', help="Get server side services and screenshot ports")
     mutually_exclusive = parser.add_mutually_exclusive_group()
     mutually_exclusive.add_argument('--target', metavar='IPADDR', help="An IPv4 address or CIDR range to scan. e.g. 192.168.0.1, 192.168.0.1/24", dest='target')
     mutually_exclusive.add_argument('--target-file', metavar='FILENAME', help="A file of line separated target IPv4 addresses or CIDR ranges", dest='tfile')
@@ -422,6 +445,7 @@ def main():
         "scanTimeout": 660,
         "webScreenshots": True,
         "vncScreenshots": True,
+        "screenshotPorts": "80,443",
         "scriptTimeout": 60,
         "hostTimeout": 600,
         "osScanLimit": True,
@@ -429,6 +453,12 @@ def main():
         "scripts": "default"
     }
     target_data_template = {"agent_config": defaultAgentConfig, "scan_reason":"manual", "tags":[]}
+
+    if args.use_server_agent_config:
+        server_agentConfig = fetch_agentConfig()
+        target_data_template['agent_config'] = server_agentConfig['agent_config']
+        target_data_template['agent_config']['scripts'] = server_agentConfig['agent_config']['scripts']
+
     if args.target:
         print_info("Scanning: %s" % args.target)
 

@@ -59,3 +59,12 @@ class Config:
         # Authentication token that agents can use to talk to the server API
         # Only needed if the server is configured to require agent authentication
         self.auth_token = os.environ.get("NATLAS_AGENT_TOKEN") or None
+
+        # Enable additional ports to be screenshot
+        self.screenshotPorts = os.environ.get("SCREENSHOT_PORTS") or "80,443"
+
+        # Feed nmap results into aquatone for screenshots
+        self.aquatoneAllPorts = os.environ.get("AQUATONE_ALLPORTS") or False
+
+        # Use server config for services and screenshot ports
+        self.use_server_agent_config = os.environ.get("USE_SERVER_AGENT_CONFIG") or False

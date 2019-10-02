@@ -166,7 +166,8 @@ class AgentConfig(db.Model):
     scanTimeout = db.Column(db.Integer, default=660) # SIGKILL nmap if it's running longer than this
     webScreenshots = db.Column(db.Boolean, default=True) # Attempt to take web screenshots (aquatone)
     vncScreenshots = db.Column(db.Boolean, default=True) # Attempt to take VNC screenshots (xvfb+vncsnapshot)
-
+    screenshotPorts = db.Column(db.String, default="80,443") # Default ports to screenshot if enabled
+    aquatoneAllPorts = db.Column(db.Boolean, default=True) # Send nmap results to aquatone for screenshotting
     scriptTimeout = db.Column(db.Integer, default=60) # --script-timeout (s)
     hostTimeout = db.Column(db.Integer, default=600) # --host-timeout (s)
     osScanLimit = db.Column(db.Boolean, default=True) # --osscan-limit

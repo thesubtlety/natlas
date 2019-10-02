@@ -160,3 +160,11 @@ def natlasServices():
         del tmpdict['as_list'] # don't return the "as_list" version of the services, which is only used for making a pretty table.
         return json.dumps(tmpdict), 200, {'content-type':'application/json'}
     return json.dumps(current_app.current_services), 404, {'content-type':'application/json'}
+
+@bp.route('/natlas-agentConfig', methods=['GET'])
+@isAgentAuthenticated
+def natlasAgentConfig():
+    conf = {}
+    conf['agent_config'] = current_app.agentConfig
+    conf['agent_config']['scripts'] = current_app.agentScriptStr
+    return json.dumps(conf), 200, {'content-type':'application/json'}

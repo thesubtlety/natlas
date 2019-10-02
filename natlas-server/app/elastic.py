@@ -48,6 +48,10 @@ class Elastic:
                             "nmap_data": {"type": "text"},
                             "xml_data": {"type": "text", "index":"false"},
                             "gnmap_data": {"type": "text", "index": "false"},
+                            "screenshots": {"properties": {
+                                "port80headshot": {"type": "binary"},
+                                "port443headshot": {"type": "binary"},
+                             }},
                             "httpsheadshot": {"type": "binary"},
                             "httpsheadshot": {"type": "binary"},
                             "vncheadshot": {"type":"binary"},
