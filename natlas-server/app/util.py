@@ -19,7 +19,7 @@ def hostinfo(ip):
 
     screenshots = context.get('screenshots')
     if screenshots:
-        hostinfo['headshots'] = len(headshots) + headshots
+        hostinfo['headshots'] = len(screenshots) + headshots
 
     if context.get('hostname'):
         hostinfo['hostname'] = context.get('hostname')
