@@ -46,7 +46,7 @@
     {% endif %}
     {% if host.screenshots %}
         {% for shot, b64 in host.screenshots.items()  %}
-           <h5 class="mt-2">Screenshot {{ shot | replace("_"," ") }}</h5>
+           <h5 class="mt-2">Screenshot {{ shot | replace("_headshot","") }}</h5>
            <div class="expand-img"><img class="img-responsive img-thumbnail" src="data:image/jpeg;base64,{{ b64 }}" alt="{{ host.ip }} - {{ shot }}"></div>
         {% endfor %}
     {% endif %}

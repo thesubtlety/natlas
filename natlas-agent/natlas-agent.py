@@ -363,12 +363,19 @@ def aquatoneAllPorts(result, scan_id, target):
                 shutil.rmtree("data/aquatone.{}/".format(scan_id))
             else:
                 for f in os.listdir(screenshotPath):
-                    port = re.findall('__(\d{1,5})\.png',f)
+                    port = ""
+                    for s in re.split(r'__', f):
+                        if "http" in s or "_" in s:
+                            continue
+                        matches = re.findall(r'\d{1,5}',s)
+                        if len(matches) == 1:
+                            port = matches[0]
                     if not port:
                         service = f.split("_")[0]
                         port = 443 if service == "https" else 80
-                    else:
-                        port = port[0]
+                    if not port:
+                        service = f.split("_")[0]
+                        port = 443 if service == "https" else 80
                     portIndexName = "port{}_headshot".format(port)
                     result['screenshots'][portIndexName] = str(base64.b64encode(
                         open(screenshotPath+"/"+f, 'rb').read()))[2:-1]
