@@ -214,7 +214,7 @@ def scan(target_data=None):
     agentConfig = target_data["agent_config"]
     result['scan_start'] = datetime.now(timezone.utc).isoformat()
 
-    command = ["nmap", "-oA", "data/natlas."+scan_id, "--servicedb", "./natlas-services"]
+    command = ["nmap", "-sUS", "-oA", "data/natlas."+scan_id, "--servicedb", "./natlas-services"]
     if agentConfig["versionDetection"]:
         command.append("-sV")
     if agentConfig["osDetection"]:
