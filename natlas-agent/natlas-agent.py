@@ -14,6 +14,7 @@ import argparse
 import shutil
 import hashlib
 import glob
+import socket
 from datetime import datetime,timezone
 from libnmap.parser import NmapParser, NmapParserException
 import ipaddress
@@ -213,6 +214,7 @@ def scan(target_data=None):
     result['scan_id'] = scan_id
     agentConfig = target_data["agent_config"]
     result['scan_start'] = datetime.now(timezone.utc).isoformat()
+    result['agentIP'] = target_data["agent_config"]["agentIP"]
 
     command = ["nmap", "-oA", "data/natlas."+scan_id, "--servicedb", "./natlas-services"]
     if agentConfig["versionDetection"]:
@@ -457,6 +459,8 @@ def main():
         t.setDaemon(True)
         t.start()
 
+    current_ip = socket.gethostbyname(socket.gethostname())
+
     # Use a default agent config of all options enabled if we are in standalone mode
     defaultAgentConfig = {
         "id": 0,
@@ -473,7 +477,9 @@ def main():
         "hostTimeout": 600,
         "osScanLimit": True,
         "noPing": False,
-        "scripts": "default"
+        "scripts": "default",
+        "agentIP": current_ip
+
     }
     target_data_template = {"agent_config": defaultAgentConfig, "scan_reason":"manual", "tags":[]}
 
@@ -481,6 +487,7 @@ def main():
         server_agentConfig = fetch_agentConfig()
         target_data_template['agent_config'] = server_agentConfig['agent_config']
         target_data_template['agent_config']['scripts'] = server_agentConfig['agent_config']['scripts']
+        target_data_template['agent_config']['agentIP'] = current_ip #hack since i'm not updating the server here
 
     if args.target:
         print_info("Scanning: %s" % args.target)
