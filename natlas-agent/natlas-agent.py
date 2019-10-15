@@ -459,7 +459,7 @@ def main():
         t.setDaemon(True)
         t.start()
 
-    current_ip = socket.gethostbyname(socket.gethostname())
+    current_ip = socket.getfqdn()
 
     # Use a default agent config of all options enabled if we are in standalone mode
     defaultAgentConfig = {
